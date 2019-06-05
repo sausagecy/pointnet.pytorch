@@ -7,7 +7,7 @@ from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
 
-
+# transformation for input, ouput size: (batchsize, 3, 3)
 class STN3d(nn.Module):
     def __init__(self):
         super(STN3d, self).__init__()
@@ -31,7 +31,7 @@ class STN3d(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
-        x = torch.max(x, 2, keepdim=True)[0]
+        x = torch.max(x, 2, keepdim=True)[0] # torch.max return 2 dimensions, dim 0 is value, dim 1 is indices
         x = x.view(-1, 1024)
 
         x = F.relu(self.bn4(self.fc1(x)))
@@ -77,7 +77,8 @@ class STNkd(nn.Module):
         x = F.relu(self.bn5(self.fc2(x)))
         x = self.fc3(x)
 
-        iden = Variable(torch.from_numpy(np.eye(self.k).flatten().astype(np.float32))).view(1,self.k*self.k).repeat(batchsize,1)
+        iden = torch.from_numpy(np.eye(self.k).flatten().astype(np.float32)).view(1,self.k*self.k).repeat(batchsize,1)
+        iden.requires_grad = True
         if x.is_cuda:
             iden = iden.cuda()
         x = x + iden
@@ -101,9 +102,9 @@ class PointNetfeat(nn.Module):
 
     def forward(self, x):
         n_pts = x.size()[2]
-        trans = self.stn(x)
+        trans = self.stn(x) # generate transformation matrix from input 
         x = x.transpose(2, 1)
-        x = torch.bmm(x, trans)
+        x = torch.bmm(x, trans) # matrix multiply, input × transformation matrix
         x = x.transpose(2, 1)
         x = F.relu(self.bn1(self.conv1(x)))
 
@@ -122,10 +123,11 @@ class PointNetfeat(nn.Module):
         x = x.view(-1, 1024)
         if self.global_feat:
             return x, trans, trans_feat
-        else:
+        else: # point features(Segmentation Network)
             x = x.view(-1, 1024, 1).repeat(1, 1, n_pts)
             return torch.cat([x, pointfeat], 1), trans, trans_feat
 
+# whole pipeline for 3d object classification 
 class PointNetCls(nn.Module):
     def __init__(self, k=2, feature_transform=False):
         super(PointNetCls, self).__init__()
@@ -146,7 +148,7 @@ class PointNetCls(nn.Module):
         x = self.fc3(x)
         return F.log_softmax(x, dim=1), trans, trans_feat
 
-
+#whole pipeline for 3d object part segmentation
 class PointNetDenseCls(nn.Module):
     def __init__(self, k = 2, feature_transform=False):
         super(PointNetDenseCls, self).__init__()
@@ -184,13 +186,13 @@ def feature_transform_regularizer(trans):
     return loss
 
 if __name__ == '__main__':
-    sim_data = Variable(torch.rand(32,3,2500))
+    sim_data = torch.rand(32,3,2500, requires_grad=True)
     trans = STN3d()
     out = trans(sim_data)
     print('stn', out.size())
     print('loss', feature_transform_regularizer(out))
 
-    sim_data_64d = Variable(torch.rand(32, 64, 2500))
+    sim_data_64d = torch.rand(32, 64, 2500, requires_grad=True)
     trans = STNkd(k=64)
     out = trans(sim_data_64d)
     print('stn64d', out.size())
