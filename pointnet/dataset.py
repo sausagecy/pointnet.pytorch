@@ -17,13 +17,13 @@ def get_segmentation_classes(root):
     with open(catfile, 'r') as f:
         for line in f:
             ls = line.strip().split()
-            cat[ls[0]] = ls[1]
+            cat[ls[0]] = ls[1] # e.g. cat = {'Airplane': '02691156', ...}
 
-    for item in cat:
+    for item in cat:  
         dir_seg = os.path.join(root, cat[item], 'points_label')
         dir_point = os.path.join(root, cat[item], 'points')
-        fns = sorted(os.listdir(dir_point))
-        meta[item] = []
+        fns = sorted(os.listdir(dir_point)) # get name of .pts files below the directory 'data_dir/xxx/points/'
+        meta[item] = [] #e.g. meta = {'Airplane':[(pts path 1, seg path 1), ...], ...}
         for fn in fns:
             token = (os.path.splitext(os.path.basename(fn))[0])
             meta[item].append((os.path.join(dir_point, token + '.pts'), os.path.join(dir_seg, token + '.seg')))
@@ -33,10 +33,10 @@ def get_segmentation_classes(root):
             datapath = []
             num_seg_classes = 0
             for fn in meta[item]:
-                datapath.append((item, fn[0], fn[1]))
+                datapath.append((item, fn[0], fn[1]))# (name, .pts path, .seg path)
 
-            for i in tqdm(range(len(datapath))):
-                l = len(np.unique(np.loadtxt(datapath[i][-1]).astype(np.uint8)))
+            for i in tqdm(range(len(datapath))):# check the largest segmentation numbers of xxx.seg
+                l = len(np.unique(np.loadtxt(datapath[i][-1]).astype(np.uint8))) 
                 if l > num_seg_classes:
                     num_seg_classes = l
 
@@ -77,7 +77,7 @@ class ShapeNetDataset(data.Dataset):
         if not class_choice is None:
             self.cat = {k: v for k, v in self.cat.items() if k in class_choice}
 
-        self.id2cat = {v: k for k, v in self.cat.items()}
+        self.id2cat = {v: k for k, v in self.cat.items()} # inverse mapping from id to category name 
 
         self.meta = {}
         splitfile = os.path.join(self.root, 'train_test_split', 'shuffled_{}_file_list.json'.format(split))
@@ -108,11 +108,11 @@ class ShapeNetDataset(data.Dataset):
 
     def __getitem__(self, index):
         fn = self.datapath[index]
-        cls = self.classes[self.datapath[index][0]]
+        cls = self.classes[self.datapath[index][0]]# classes={'Airplane':0, 'Bag':1, ...}
         point_set = np.loadtxt(fn[1]).astype(np.float32)
         seg = np.loadtxt(fn[2]).astype(np.int64)
         #print(point_set.shape, seg.shape)
-
+        # random choose 2500 points from one .pts file
         choice = np.random.choice(len(seg), self.npoints, replace=True)
         #resample
         point_set = point_set[choice, :]
