@@ -133,8 +133,8 @@ for epoch in range(opt.nepoch):
         optimizer.zero_grad()
         classifier = classifier.train()
         pred, trans, trans_feat = classifier(points)
-        #loss = F.nll_loss(pred, target)
-        loss = criterion(pred, target)
+        loss = F.nll_loss(pred, target)
+        #loss = criterion(pred, target)
         if opt.feature_transform:
             loss += feature_transform_regularizer(trans_feat) * 0.001
         loss.backward()
@@ -151,8 +151,8 @@ for epoch in range(opt.nepoch):
             points, target = points.cuda(), target.cuda()
             classifier = classifier.eval()
             pred, _, _ = classifier(points)
-            #loss = F.nll_loss(pred, target)
-            loss = criterion(pred, target)
+            loss = F.nll_loss(pred, target)
+            #loss = criterion(pred, target)
             pred_choice = pred.data.max(1)[1]
             correct = pred_choice.eq(target.data).cpu().sum()
             print('[%d: %d/%d] %s loss: %f accuracy: %f' % (epoch, i, num_batch, blue('val'), loss.item(), correct.item()/float(opt.batchSize)))
