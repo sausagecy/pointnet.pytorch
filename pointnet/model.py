@@ -124,7 +124,7 @@ class PointNetfeat(nn.Module):
         if self.global_feat:
             return x, trans, trans_feat
         else: # point features(Segmentation Network)
-            x = x.view(-1, 1024, 1).repeat(1, 1, n_pts)
+            x = x.view(-1, 1024, 1).repeat(1, 1, n_pts) # 'repeat' function copies the tensor’s data
             return torch.cat([x, pointfeat], 1), trans, trans_feat
 
 # whole pipeline for 3d object classification 
